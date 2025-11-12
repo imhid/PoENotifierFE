@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/user"
 	"path"
+	"path/filepath"
 	"runtime"
 
 	// for embedding default config
@@ -46,6 +47,7 @@ type Pattern struct {
 
 type Config struct {
 	Patterns []Pattern `json:"patterns"`
+	LogPath  string    `json:"log_path,omitempty"`
 }
 
 func importConfig() (*Config, error) {
@@ -62,6 +64,28 @@ func importConfig() (*Config, error) {
 		return nil, fmt.Errorf("error unmarshalling config: %w", err)
 	}
 	return &config, nil
+}
+
+func saveConfig(config *Config) error {
+	configPath, err := getConfigPath()
+	if err != nil {
+		return fmt.Errorf("error getting config path: %w", err)
+	}
+
+	data, err := json.MarshalIndent(config, "", "    ")
+	if err != nil {
+		return fmt.Errorf("error marshalling config: %w", err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
+		return fmt.Errorf("error ensuring config directory: %w", err)
+	}
+
+	if err := os.WriteFile(configPath, data, 0644); err != nil {
+		return fmt.Errorf("error writing config file: %w", err)
+	}
+
+	return nil
 }
 
 func getConfigPath() (string, error) {

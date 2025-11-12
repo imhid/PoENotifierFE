@@ -10,6 +10,7 @@ A watcher for Path of Exile's `Client.txt` log file that uses regular expression
 - **System tray integration** for background operation
 - **Automatic configuration** creation on first run
 - **Detailed logging** for debugging and monitoring
+- **Smart log discovery** that covers Steam and custom installations
 
 ## Installation
 
@@ -41,7 +42,8 @@ The configuration file contains a JSON object with the following structure:
             "beep": true,
             "toast": true
         }
-    ]
+    ],
+    "log_path": "D:\\\\Games\\\\Path of Exile\\\\logs\\\\Client.txt"
 }
 ```
 
@@ -50,6 +52,7 @@ The configuration file contains a JSON object with the following structure:
 #### Root Object
 
 - **`patterns`** (array): Array containing all alert patterns
+- **`log_path`** (string, optional): Full path to `Client.txt`. Leave empty to let the notifier auto-detect common install locations and prompt you if nothing is found.
 
 #### Pattern Object
 
@@ -156,8 +159,8 @@ Right-click on the system tray icon to access:
 
 ### Common Issues
 
-- **No notifications**: Check that Path of Exile is installed in the default location, this app does not support any other location yet, check DND mode too.
-- **Can't find config folder**: Use the "Open Config" option from the system tray menu, if you use a custom location this won't work either.
+- **No notifications**: Confirm that `Client.txt` is accessible. The notifier checks common Steam and standalone directories and caches the last working path. If you installed the game elsewhere, set the absolute file path under `log_path` in the config.
+- **Can't find config folder**: Use the "Open Config" option from the system tray menu. If you moved the configuration manually, open the saved `log_path` directory and edit `notifier_config.json` there.
 - **Regex not matching**: Verify regex syntax and test with online regex tools. See [Regex 101](https://regex101.com/)
 - **Configuration errors**: Validate JSON syntax using a JSON validator. See [Json lint](https://jsonlint.com/)
 
