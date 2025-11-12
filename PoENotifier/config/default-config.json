@@ -21,5 +21,6 @@
             "beep": true,
             "toast": true
         }
-    ]
+    ],
+    "poePath": ""
 }

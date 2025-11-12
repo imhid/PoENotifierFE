@@ -14,6 +14,7 @@ import (
 	"runtime"
 	"syscall"
 	"time"
+	"unsafe"
 )
 
 func main() {
@@ -26,10 +27,71 @@ func main() {
 	// User can edit the config file to change the patterns to match
 	checkConfig()
 
-	// TODO : support other OS than Windows
-	// TODO : add path to config file to support other installations
-	// For now, we will use the default Path of Exile installation path on Windows
-	t := tail.File("C:\\Program Files (x86)\\Grinding Gear Games\\Path of Exile\\logs\\Client.txt", tail.Config{
+	// Load config
+	config, err := importConfig()
+	if err != nil {
+		logger.Printf("Error importing config: %v", err)
+		return
+	}
+	logger.Println("Config checked and loaded")
+
+	// Determine Path of Exile installation path
+	var poePath string
+	if config.PoEPath != "" {
+		// Use path from config if available
+		poePath = config.PoEPath
+		logger.Printf("Using Path of Exile path from config: %s", poePath)
+		// Verify the path is still valid
+		clientLogPath := getClientLogPath(poePath)
+		if _, err := os.Stat(clientLogPath); err != nil {
+			logger.Printf("Warning: Client.txt not found at configured path. Searching for installation...")
+			poePath = "" // Clear invalid path to trigger search
+		}
+	}
+
+	// If no valid path in config, search for installation
+	if poePath == "" {
+		logger.Println("Searching for Path of Exile installation...")
+		poePath = findPoEInstallation(logger)
+		if poePath != "" {
+			// Save found path to config
+			config.PoEPath = poePath
+			if err := saveConfig(config); err != nil {
+				logger.Printf("Warning: Could not save PoE path to config: %v", err)
+			} else {
+				logger.Printf("Saved Path of Exile path to config: %s", poePath)
+			}
+		}
+	}
+
+	// If still no path found, show error and exit
+	if poePath == "" {
+		configPath, _ := getConfigPath()
+		logger.Printf("ERROR: Could not find Path of Exile installation.")
+		logger.Printf("Please edit the config file and set 'poePath' to your Path of Exile installation directory.")
+		logger.Printf("Config file location: %s", configPath)
+		logger.Printf("Example: \"poePath\": \"D:\\\\Games\\\\Path of Exile\"")
+		
+		// Show a message box on Windows
+		if runtime.GOOS == "windows" {
+			showErrorMessage("Path of Exile Not Found", 
+				fmt.Sprintf("Could not find Path of Exile installation.\n\nPlease edit the config file and set 'poePath' to your installation directory.\n\nConfig file: %s", configPath))
+		}
+		os.Exit(1)
+	}
+
+	// Get the Client.txt path
+	clientLogPath := getClientLogPath(poePath)
+	logger.Printf("Using Client.txt at: %s", clientLogPath)
+
+	// Verify the log file exists
+	if _, err := os.Stat(clientLogPath); err != nil {
+		logger.Printf("ERROR: Client.txt not found at: %s", clientLogPath)
+		logger.Printf("Please verify that Path of Exile is installed at: %s", poePath)
+		os.Exit(1)
+	}
+
+	t := tail.File(clientLogPath, tail.Config{
 		Follow:     true,       // tail -f
 		BufferSize: 1024 * 128, // 128 kb for internal reader buffer
 
@@ -38,13 +100,6 @@ func main() {
 		Location: &tail.Location{Whence: io.SeekEnd, Offset: 0},
 	})
 	ctx := context.Background()
-
-	config, err := importConfig()
-	if err != nil {
-		logger.Printf("Error importing config: %v", err)
-		return
-	}
-	logger.Println("Config checked and loaded")
 
 	logger.Printf("Config imported successfully. Found %d patterns:", len(config.Patterns))
 	for _, pattern := range config.Patterns {
@@ -126,4 +181,22 @@ func beep() {
 		kernel32 := syscall.NewLazyDLL("user32.dll")
 		kernel32.NewProc("MessageBeep").Call(880, 200)
 	}
+}
+
+// showErrorMessage shows a Windows message box with an error message
+func showErrorMessage(title, message string) {
+	if runtime.GOOS != "windows" {
+		fmt.Printf("%s: %s\n", title, message)
+		return
+	}
+	user32 := syscall.NewLazyDLL("user32.dll")
+	messageBox := user32.NewProc("MessageBoxW")
+	
+	// Convert strings to UTF-16
+	titlePtr, _ := syscall.UTF16PtrFromString(title)
+	messagePtr, _ := syscall.UTF16PtrFromString(message)
+	
+	// MessageBoxW(hWnd, lpText, lpCaption, uType)
+	// MB_OK | MB_ICONERROR = 0x00000010 | 0x00000040 = 0x00000050
+	messageBox.Call(0, uintptr(unsafe.Pointer(messagePtr)), uintptr(unsafe.Pointer(titlePtr)), 0x00000050)
 }
