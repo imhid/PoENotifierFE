@@ -16,6 +16,15 @@ import (
 	"time"
 )
 
+// getConfigPathSafe returns the config path or a fallback message if there's an error
+func getConfigPathSafe() string {
+	path, err := getConfigPath()
+	if err != nil {
+		return "[unable to determine config path]"
+	}
+	return path
+}
+
 func main() {
 	// Setup logging
 	initSystray()
@@ -26,10 +35,31 @@ func main() {
 	// User can edit the config file to change the patterns to match
 	checkConfig()
 
-	// TODO : support other OS than Windows
-	// TODO : add path to config file to support other installations
-	// For now, we will use the default Path of Exile installation path on Windows
-	t := tail.File("C:\\Program Files (x86)\\Grinding Gear Games\\Path of Exile\\logs\\Client.txt", tail.Config{
+	config, err := importConfig()
+	if err != nil {
+		logger.Printf("Error importing config: %v", err)
+		return
+	}
+	logger.Println("Config checked and loaded")
+
+	// Find Path of Exile installation (searches common paths or uses configured path)
+	clientLogPath, err := getPoELogPath(config)
+	if err != nil {
+		logger.Printf("Error finding Path of Exile installation: %v", err)
+		logger.Println("Please manually set 'game_path' in your config file to your PoE installation directory.")
+		logger.Printf("Config file location: %s", getConfigPathSafe())
+		fmt.Printf("\nERROR: %v\n", err)
+		fmt.Println("\nTo fix this:")
+		fmt.Printf("1. Open your config file at: %s\n", getConfigPathSafe())
+		fmt.Println("2. Set 'game_path' to your Path of Exile installation directory")
+		fmt.Println("   Example: \"game_path\": \"D:\\\\Games\\\\Path of Exile\"")
+		fmt.Println("3. Restart the application")
+		time.Sleep(30 * time.Second) // Give user time to read the message
+		return
+	}
+	logger.Printf("Using Client.txt at: %s", clientLogPath)
+
+	t := tail.File(clientLogPath, tail.Config{
 		Follow:     true,       // tail -f
 		BufferSize: 1024 * 128, // 128 kb for internal reader buffer
 
@@ -38,13 +68,6 @@ func main() {
 		Location: &tail.Location{Whence: io.SeekEnd, Offset: 0},
 	})
 	ctx := context.Background()
-
-	config, err := importConfig()
-	if err != nil {
-		logger.Printf("Error importing config: %v", err)
-		return
-	}
-	logger.Println("Config checked and loaded")
 
 	logger.Printf("Config imported successfully. Found %d patterns:", len(config.Patterns))
 	for _, pattern := range config.Patterns {
