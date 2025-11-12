@@ -46,6 +46,7 @@ type Pattern struct {
 
 type Config struct {
 	Patterns []Pattern `json:"patterns"`
+	PoEPath  string    `json:"poePath,omitempty"` // Path to Path of Exile installation
 }
 
 func importConfig() (*Config, error) {

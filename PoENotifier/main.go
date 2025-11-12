@@ -26,10 +26,46 @@ func main() {
 	// User can edit the config file to change the patterns to match
 	checkConfig()
 
+	config, err := importConfig()
+	if err != nil {
+		logger.Printf("Error importing config: %v", err)
+		return
+	}
+	logger.Println("Config checked and loaded")
+
+	// Find Path of Exile installation path
+	poePath := findPoEPath(config, func(format string, args ...interface{}) {
+		logger.Printf(format, args...)
+	})
+
+	if poePath == "" {
+		// Try to prompt user for path
+		poePath = promptUserForPath()
+		if poePath == "" || !isValidPoEPath(poePath) {
+			logger.Printf("Invalid or empty PoE path provided. Exiting.")
+			fmt.Println("Invalid Path of Exile installation path. Please check the path and try again.")
+			os.Exit(1)
+		}
+		// Save the path to config for future use
+		if err := savePoEPathToConfig(config, poePath); err != nil {
+			logger.Printf("Warning: Could not save PoE path to config: %v", err)
+		} else {
+			logger.Printf("Saved PoE path to config: %s", poePath)
+		}
+	} else {
+		// Save the found path to config if it wasn't already there
+		if config.PoEPath != poePath {
+			if err := savePoEPathToConfig(config, poePath); err != nil {
+				logger.Printf("Warning: Could not save PoE path to config: %v", err)
+			}
+		}
+	}
+
+	clientTxtPath := filepath.Join(poePath, "logs", "Client.txt")
+	logger.Printf("Using PoE log file: %s", clientTxtPath)
+
 	// TODO : support other OS than Windows
-	// TODO : add path to config file to support other installations
-	// For now, we will use the default Path of Exile installation path on Windows
-	t := tail.File("C:\\Program Files (x86)\\Grinding Gear Games\\Path of Exile\\logs\\Client.txt", tail.Config{
+	t := tail.File(clientTxtPath, tail.Config{
 		Follow:     true,       // tail -f
 		BufferSize: 1024 * 128, // 128 kb for internal reader buffer
 
@@ -38,13 +74,6 @@ func main() {
 		Location: &tail.Location{Whence: io.SeekEnd, Offset: 0},
 	})
 	ctx := context.Background()
-
-	config, err := importConfig()
-	if err != nil {
-		logger.Printf("Error importing config: %v", err)
-		return
-	}
-	logger.Println("Config checked and loaded")
 
 	logger.Printf("Config imported successfully. Found %d patterns:", len(config.Patterns))
 	for _, pattern := range config.Patterns {
