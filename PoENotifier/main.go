@@ -26,19 +26,6 @@ func main() {
 	// User can edit the config file to change the patterns to match
 	checkConfig()
 
-	// TODO : support other OS than Windows
-	// TODO : add path to config file to support other installations
-	// For now, we will use the default Path of Exile installation path on Windows
-	t := tail.File("C:\\Program Files (x86)\\Grinding Gear Games\\Path of Exile\\logs\\Client.txt", tail.Config{
-		Follow:     true,       // tail -f
-		BufferSize: 1024 * 128, // 128 kb for internal reader buffer
-
-		NotifyTimeout: time.Duration(1 * time.Second),
-
-		Location: &tail.Location{Whence: io.SeekEnd, Offset: 0},
-	})
-	ctx := context.Background()
-
 	config, err := importConfig()
 	if err != nil {
 		logger.Printf("Error importing config: %v", err)
@@ -46,12 +33,29 @@ func main() {
 	}
 	logger.Println("Config checked and loaded")
 
+	logFilePath, err := resolveLogFilePath(config, logger)
+	if err != nil {
+		logger.Printf("Unable to resolve Path of Exile log file: %v", err)
+		if toastErr := showToast("PoE Notifier", "Could not locate Path of Exile Client.txt. Update notifier_config.json with logFilePath."); toastErr != nil {
+			logger.Printf("Failed to show toast: %v", toastErr)
+		}
+		return
+	}
+
+	t := tail.File(logFilePath, tail.Config{
+		Follow:        true,       // tail -f
+		BufferSize:    1024 * 128, // 128 kb for internal reader buffer
+		NotifyTimeout: time.Second,
+		Location:      &tail.Location{Whence: io.SeekEnd, Offset: 0},
+	})
+	ctx := context.Background()
+
 	logger.Printf("Config imported successfully. Found %d patterns:", len(config.Patterns))
 	for _, pattern := range config.Patterns {
 		logger.Printf("  - Pattern: %s, Regex: %s", pattern.Name, pattern.Regex)
 	}
 
-	logger.Println("Starting to tail PoE log file...")
+	logger.Printf("Starting to tail PoE log file at %s...", logFilePath)
 
 	if err := t.Tail(ctx, func(ctx context.Context, l *tail.Line) error {
 		if matched, pattern := checkPattern(string(l.Data), config.Patterns, logger); matched {

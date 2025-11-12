@@ -45,7 +45,9 @@ type Pattern struct {
 }
 
 type Config struct {
-	Patterns []Pattern `json:"patterns"`
+	LogFilePath  string    `json:"logFilePath,omitempty"`
+	InstallPaths []string  `json:"installPaths,omitempty"`
+	Patterns     []Pattern `json:"patterns"`
 }
 
 func importConfig() (*Config, error) {
@@ -77,4 +79,22 @@ func getConfigPath() (string, error) {
 		// return error if the OS is not supported
 		return "", errors.New("unknown operating system")
 	}
+}
+
+func saveConfig(config *Config) error {
+	configPath, err := getConfigPath()
+	if err != nil {
+		return fmt.Errorf("error getting config path: %w", err)
+	}
+
+	configJSON, err := json.MarshalIndent(config, "", "    ")
+	if err != nil {
+		return fmt.Errorf("error serializing config: %w", err)
+	}
+
+	if err := os.WriteFile(configPath, configJSON, 0644); err != nil {
+		return fmt.Errorf("error writing config file: %w", err)
+	}
+
+	return nil
 }

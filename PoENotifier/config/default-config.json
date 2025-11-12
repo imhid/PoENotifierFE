@@ -1,4 +1,14 @@
 {
+    "logFilePath": "",
+    "installPaths": [
+        "C:/Program Files (x86)/Grinding Gear Games/Path of Exile",
+        "C:/Program Files/Grinding Gear Games/Path of Exile",
+        "C:/Program Files (x86)/Steam/steamapps/common/Path of Exile",
+        "C:/Program Files/Steam/steamapps/common/Path of Exile",
+        "C:/Games/Path of Exile",
+        "D:/Games/Path of Exile",
+        "D:/SteamLibrary/steamapps/common/Path of Exile"
+    ],
     "patterns": [
         {
             "name": "Nameless seer",

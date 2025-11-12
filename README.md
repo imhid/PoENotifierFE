@@ -33,6 +33,11 @@ The configuration file contains a JSON object with the following structure:
 
 ```json
 {
+    "logFilePath": "D:/Games/Path of Exile/logs/Client.txt",
+    "installPaths": [
+        "D:/Games/Path of Exile",
+        "C:/Program Files (x86)/Grinding Gear Games/Path of Exile"
+    ],
     "patterns": [
         {
             "name": "Pattern Name",
@@ -49,6 +54,8 @@ The configuration file contains a JSON object with the following structure:
 
 #### Root Object
 
+- **`logFilePath`** (string, optional): Full path to `Client.txt`. When set, the notifier tails this file directly.
+- **`installPaths`** (array of string, optional): Directories or files to probe when auto-detecting the log file. Useful for custom installations; forward slashes work fine.
 - **`patterns`** (array): Array containing all alert patterns
 
 #### Pattern Object
@@ -156,8 +163,8 @@ Right-click on the system tray icon to access:
 
 ### Common Issues
 
-- **No notifications**: Check that Path of Exile is installed in the default location, this app does not support any other location yet, check DND mode too.
-- **Can't find config folder**: Use the "Open Config" option from the system tray menu, if you use a custom location this won't work either.
+- **No notifications**: Confirm the notifier found `Client.txt`. Look for `Using Path of Exile log file at ...` in the notifier logs or set `logFilePath` in `notifier_config.json`. Check Windows Focus Assist/DND as well.
+- **Can't find config folder**: Use the "Open Config" option from the system tray menu.
 - **Regex not matching**: Verify regex syntax and test with online regex tools. See [Regex 101](https://regex101.com/)
 - **Configuration errors**: Validate JSON syntax using a JSON validator. See [Json lint](https://jsonlint.com/)
 
