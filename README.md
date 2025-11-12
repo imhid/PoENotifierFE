@@ -9,6 +9,7 @@ A watcher for Path of Exile's `Client.txt` log file that uses regular expression
 - **Multiple notification types**: toast notifications and audio beeps
 - **System tray integration** for background operation
 - **Automatic configuration** creation on first run
+- **Automatic log discovery** with prompts and configuration overrides for custom installations
 - **Detailed logging** for debugging and monitoring
 
 ## Installation
@@ -33,6 +34,7 @@ The configuration file contains a JSON object with the following structure:
 
 ```json
 {
+    "logPath": "",
     "patterns": [
         {
             "name": "Pattern Name",
@@ -49,6 +51,7 @@ The configuration file contains a JSON object with the following structure:
 
 #### Root Object
 
+- **`logPath`** (string, optional): Absolute path to `Client.txt` if automatic discovery fails or you prefer an explicit override
 - **`patterns`** (array): Array containing all alert patterns
 
 #### Pattern Object
@@ -156,7 +159,7 @@ Right-click on the system tray icon to access:
 
 ### Common Issues
 
-- **No notifications**: Check that Path of Exile is installed in the default location, this app does not support any other location yet, check DND mode too.
+- **No notifications**: Ensure `Client.txt` exists and can be discovered. If you use a custom installation, set `logPath` in the config or assign the `POE_LOG_PATH` environment variable.
 - **Can't find config folder**: Use the "Open Config" option from the system tray menu, if you use a custom location this won't work either.
 - **Regex not matching**: Verify regex syntax and test with online regex tools. See [Regex 101](https://regex101.com/)
 - **Configuration errors**: Validate JSON syntax using a JSON validator. See [Json lint](https://jsonlint.com/)

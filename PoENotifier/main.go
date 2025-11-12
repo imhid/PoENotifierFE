@@ -26,10 +26,21 @@ func main() {
 	// User can edit the config file to change the patterns to match
 	checkConfig()
 
-	// TODO : support other OS than Windows
-	// TODO : add path to config file to support other installations
-	// For now, we will use the default Path of Exile installation path on Windows
-	t := tail.File("C:\\Program Files (x86)\\Grinding Gear Games\\Path of Exile\\logs\\Client.txt", tail.Config{
+	config, err := importConfig()
+	if err != nil {
+		logger.Printf("Error importing config: %v", err)
+		return
+	}
+	logger.Println("Config checked and loaded")
+
+	logFilePath, err := determineLogFilePath(config, logger)
+	if err != nil {
+		logger.Printf("Failed to locate Path of Exile log file: %v", err)
+		return
+	}
+	logger.Printf("Tailing Path of Exile log file at: %s", logFilePath)
+
+	t := tail.File(logFilePath, tail.Config{
 		Follow:     true,       // tail -f
 		BufferSize: 1024 * 128, // 128 kb for internal reader buffer
 
@@ -38,13 +49,6 @@ func main() {
 		Location: &tail.Location{Whence: io.SeekEnd, Offset: 0},
 	})
 	ctx := context.Background()
-
-	config, err := importConfig()
-	if err != nil {
-		logger.Printf("Error importing config: %v", err)
-		return
-	}
-	logger.Println("Config checked and loaded")
 
 	logger.Printf("Config imported successfully. Found %d patterns:", len(config.Patterns))
 	for _, pattern := range config.Patterns {
